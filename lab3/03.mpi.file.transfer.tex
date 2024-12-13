@@ -1,0 +1,175 @@
+\documentclass{article}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+\title{Design and Implementation of an MPI-Based File Transfer System}
+\author{
+    Cao Nhat Nam \\
+    Do Thi Huong Tra \\
+    Pham Ngoc Minh Chau \\
+    Vu Hoang Mai Nhi \\
+    Bui Nguyen Ngoc Huyen
+}
+\date{11 December 2024}
+
+\lstdefinestyle{mypython}{
+    language=Python,
+    backgroundcolor=\color{white},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    numberstyle=\tiny\color{gray},
+    numbers=left,
+    stepnumber=1,
+    numbersep=10pt,
+    frame=single,
+    rulecolor=\color{black},
+    breaklines=true,
+    breakatwhitespace=true,
+    showstringspaces=false,
+    captionpos=b,
+}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+This document outlines the design and development of a file transfer system leveraging MPI technology. By extending a TCP-based implementation, this system capitalizes on parallelism to achieve better performance and scalability.
+
+\section{Why We Chose MPI}
+
+We opted for \textbf{mpi4py} as our MPI framework due to the following advantages:
+\begin{itemize}
+    \item \textbf{Smooth Python Integration}: Enables straightforward adaptation of existing Python scripts.
+    \item \textbf{Extensive Documentation}: Simplifies development and debugging processes.
+    \item \textbf{Active Community}: Provides ample resources and support.
+    \item \textbf{High Performance}: Delivers efficient data transfer for demanding applications.
+\end{itemize}
+
+\section{Service Design Overview}
+
+\subsection{System Architecture}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\textwidth]{mpi_service_design.png}
+    \caption{Overview of the MPI Service Architecture}
+    \label{fig:mpi_service_design}
+\end{figure}
+
+The system employs a master-worker model, where the master process coordinates tasks and workers handle data transmission.
+
+\subsection{Workflow and Components}
+
+\begin{enumerate}
+    \item \textbf{Client Process}:
+    \begin{itemize}
+        \item Establishes a connection with the server.
+        \item Transfers file chunks using MPI protocols.
+    \end{itemize}
+    \item \textbf{Server Process}:
+    \begin{itemize}
+        \item Awaits incoming file transfer requests.
+        \item Assembles and saves received file chunks.
+    \end{itemize}
+\end{enumerate}
+
+\section{System Modules}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\textwidth]{mpi_system_organization.png}
+    \caption{Structure of the System}
+    \label{fig:system_organization}
+\end{figure}
+
+The system is divided into distinct modules:
+
+\begin{itemize}
+    \item \textbf{Client Module}: Handles reading and sending files.
+    \item \textbf{Server Module}: Manages receiving and storing files.
+    \item \textbf{Communication Module}: Oversees MPI-based data exchange.
+\end{itemize}
+
+\section{File Transfer Implementation}
+
+\subsection{Client Code Example}
+
+\begin{lstlisting}[style=mypython, caption=Client-Side MPI Implementation]
+from mpi4py import MPI
+import sys
+
+def send_file(file_path, server_rank=0):
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+
+    if rank == server_rank:
+        print("Master process does not send files.")
+        return
+
+    try:
+        with open(file_path, "rb") as f:
+            data = f.read()
+    except FileNotFoundError:
+        print(f"File {file_path} not found.")
+        sys.exit(1)
+
+    file_size = len(data)
+    comm.send(file_size, dest=server_rank, tag=11)
+    comm.Send([bytearray(data), MPI.BYTE], dest=server_rank, tag=22)
+    print(f"File '{file_path}' sent to server.")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: mpirun -n <number_of_processes> python client_mpi.py <file_path>")
+        sys.exit(1)
+
+    file_path = sys.argv[1]
+    send_file(file_path)
+\end{lstlisting}
+
+\subsection{Server Code Example}
+
+\begin{lstlisting}[style=mypython, caption=Server-Side MPI Implementation]
+from mpi4py import MPI
+import sys
+
+def receive_file(output_path="received_file_mpi.txt", client_rank=1):
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+
+    if rank != client_rank:
+        print("Only the designated server process receives files.")
+        return
+
+    file_size = comm.recv(source=MPI.ANY_SOURCE, tag=11)
+    buffer = bytearray(file_size)
+    comm.Recv([buffer, MPI.BYTE], source=MPI.ANY_SOURCE, tag=22)
+
+    with open(output_path, "wb") as f:
+        f.write(buffer)
+    print(f"File received and saved as '{output_path}'.")
+
+if __name__ == "__main__":
+    receive_file()
+\end{lstlisting}
+
+\section{Team Contributions}
+
+\begin{itemize}
+    \item \textbf{Cao Nhat Nam}: Developed the client module and implemented file reading functionality.
+    \item \textbf{Do Thi Huong Tra}: Designed and coded the server module for file reception.
+    \item \textbf{Pham Ngoc Minh Chau}: Created system diagrams and assisted in report preparation.
+    \item \textbf{Vu Hoang Mai Nhi}: Integrated all modules and ensured effective communication between components.
+    \item \textbf{Bui Nguyen Ngoc Huyen}: Coordinated teamwork and oversaw version control.
+\end{itemize}
+
+\section{Summary}
+
+This MPI-powered file transfer system significantly improves upon the original TCP-based implementation by utilizing parallel processing for greater scalability and efficiency. By leveraging \texttt{mpi4py}, the development process was both efficient and scalable, resulting in a robust solution for simultaneous file transfers.
+
+\end{document}
