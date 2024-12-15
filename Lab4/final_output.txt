@@ -1,0 +1,15 @@
+a	1
+be	2
+swatch	2
+swiss	5
+switch?	1
+switched	2
+switches.	1
+three	2
+to	3
+watch	4
+which	4
+wished	1
+wishes	2
+witch-bitch,	2
+witch-bitches,	2
